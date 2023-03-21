@@ -48,7 +48,7 @@ app.listen(PORT, () => {
 const generateRandomString = () => {
   let urlId = "";
   const alphanumeric = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", 1, 2, 3, 4, 5, 6, 7, 8, 9];
-  for (let i = 11; i > urlId.length; i--) {
+  for (let i = urlId.length; i < 6; i++) {
     let randomIndex = Math.floor(Math.random() * alphanumeric.length);
     let item = alphanumeric[randomIndex];
     urlId += item;
