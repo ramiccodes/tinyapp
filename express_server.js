@@ -54,20 +54,28 @@ app.post("/logout", (req, res) => {
 
 app.post("/register", (req, res) => {
   let id = generateRandomString();
-  users[id] = {id: id, email: req.body.email, password: req.body.password}
+  if (req.body.email === '' || req.body.password === '') {
+    return res.status(400).send("Email or Password not available");
+  }
+  for (const userId in users) {
+    let user = users[userId];
+    if (user.email === req.body.email) {
+      return res.status(400).send("Email already registered");
+    }
+  }
+  users[id] = {id: id, email: req.body.email, password: req.body.password};
+  console.log(users);
   res.cookie('user_id', users[id].id);
   res.redirect("/urls");
 });
 
 app.get("/register", (req, res) => {
   const templateVars = {users, cookie: req.cookies["user_id"]};
-  console.log(templateVars);
   res.render("urls_register", templateVars);
 })
 
 app.get("/urls", (req, res) => {
   const templateVars = {urls: urlDatabase, users, cookie: req.cookies["user_id"]};
-  console.log(templateVars)
   res.render("urls_index", templateVars);
 })
 
