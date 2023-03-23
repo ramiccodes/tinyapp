@@ -23,8 +23,8 @@ const urlDatabase = {
 const users = {
   userRandomID: {
     id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur",
+    email: "a@a.com",
+    password: "a",
   },
   user2RandomID: {
     id: "user2RandomID",
@@ -48,13 +48,24 @@ app.get("/login", (req, res) => {
 })
 
 app.post("/login", (req, res) => {
-  res.cookie('username', req.body.username);
-  res.redirect("/urls");
+  if (req.body.email === '' || req.body.password === '') {
+    return res.status(400).send("Email or Password not available");
+  }
+  for (const userId in users) {
+    let user = users[userId];
+    if (user.email === req.body.email) {
+      if (user.password === req.body.password) {
+        res.cookie('user_id', user.id);
+        return res.redirect("/urls");
+      }
+    }
+  }
+  return res.status(403).send("Incorrect email or password");
 })
 
 app.post("/logout", (req, res) => {
   res.clearCookie('user_id');
-  res.redirect("/urls");
+  res.redirect("/login");
 })
 
 app.post("/register", (req, res) => {
