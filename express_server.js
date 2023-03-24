@@ -34,12 +34,12 @@ const urlsForUser = (id) => {
 console.log(urlsForUser("aJ48lW"))
 
 const users = {
-  userRandomID: {
+  aJ48lW: {
     id: "aJ48lW",
     email: "a@a.com",
     password: "a",
   },
-  user2RandomID: {
+  aa48lW: {
     id: "aa48lW",
     email: "b@b.com",
     password: "b",
@@ -134,20 +134,38 @@ app.post("/urls", (req, res) => {
 })
 
 app.post("/urls/:id/delete", (req, res) => {
+  if (!urlDatabase[req.params.id]) {
+    return res.send("This URL link does not exist!")
+  }
+  if (!req.cookies["user_id"]) {
+    console.log(req.params.id)
+    return res.send("You must be logged in to delete this URL");
+  }
+  if (urlDatabase[req.params.id] && urlDatabase[req.params.id].userID !== req.cookies["user_id"]) {
+    return res.send("You cannot delete this link without being the owner");
+  }
   delete urlDatabase[req.params.id];
   res.redirect("/urls");
 })
 
 app.post("/urls/:id", (req, res) => {
-  if (urlDatabase[req.params.id] && urlDatabase[req.params.id].userID === req.cookies["user_id"]) {
-    urlDatabase[req.params.id] = {longURL: req.body.longURL, userID: req.cookies["user_id"]};
+  if (!urlDatabase[req.params.id]) {
+    return res.send("This URL link does not exist!")
   }
-  return res.redirect("/urls");;
+  if (!req.cookies["user_id"]) {
+    console.log(req.params.id)
+    return res.send("You must be logged in to edit this URL");
+  }
+  if (urlDatabase[req.params.id] && urlDatabase[req.params.id].userID !== req.cookies["user_id"]) {
+    return res.send("You cannot edit this link without being the owner");
+  }
+  urlDatabase[req.params.id] = {longURL: req.body.longURL, userID: req.cookies["user_id"]};
+  return res.redirect("/urls");
 })
 
 app.get("/urls/:id", (req, res) => {
   if (!req.cookies["user_id"]) {
-    res.send("You must log in first before you can access this page")
+    res.send("You must log in first before you can access this URL page")
   }
   if (urlDatabase[req.params.id] && urlDatabase[req.params.id].userID === req.cookies["user_id"]) {
     const templateVars = {id: req.params.id, urls: urlDatabase[req.params.id], users, cookie: req.cookies["user_id"]};
