@@ -2,6 +2,7 @@
 const express = require('express');
 const bcryptjs = require('bcryptjs');
 let cookieSession = require('cookie-session');
+const { getUserByEmail } = require('./helpers');
 const app = express();
 const PORT = 8080;
 
@@ -28,7 +29,7 @@ const users = {
 // ========================== Functions =========================
 const generateRandomString = () => {
   let urlId = "";
-  const alphanumeric = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const alphanumeric = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z","A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", 1, 2, 3, 4, 5, 6, 7, 8, 9];
   for (let i = urlId.length; i < 6; i++) {
     let randomIndex = Math.floor(Math.random() * alphanumeric.length);
     let item = alphanumeric[randomIndex];
@@ -57,7 +58,7 @@ app.use(cookieSession({
 
 // ========================== Endpoints ==========================
 app.get("/", (req, res) => {
-  res.send("Hello");
+  res.send("Please go to the endpoint /login!");
 });
 
 app.get("/login", (req, res) => {
@@ -69,7 +70,6 @@ app.get("/login", (req, res) => {
 })
 
 app.post("/login", (req, res) => {
-  let id = generateRandomString();
   const hashedPassword = bcryptjs.hashSync(req.body.password, 10);
   if (req.body.email === '' || req.body.password === '') {
     return res.status(400).send("Email or Password not available");
@@ -103,10 +103,10 @@ app.post("/register", (req, res) => {
       return res.status(400).send("Email already registered");
     }
   }
+  // Sets the key and the id as the return value of the generateRandomString function, email as the value from the form and the password but it is hashed.
   users[id] = {id: id, email: req.body.email, password: bcryptjs.hashSync(req.body.password, 10)};
-  console.log(users[id]);
   req.session.user_id = users[id].id;
-  res.redirect("/urls");
+  return res.redirect("/urls");
 });
 
 app.get("/register", (req, res) => {
@@ -138,6 +138,7 @@ app.post("/urls", (req, res) => {
   if (!req.session.user_id) {
     return res.send("You cannot shorten links without creating an account");
   }
+  // Sets the key in the urlDatabase as the return value of the generateRandomString function and the value as the longURL as the url received from the form and the userID as the cookie.
   urlDatabase[id] = {longURL: req.body.longURL, userID: req.session.user_id};
   res.redirect(`/urls/${id}`);
 })
@@ -147,9 +148,9 @@ app.post("/urls/:id/delete", (req, res) => {
     return res.send("This URL link does not exist!")
   }
   if (!req.session.user_id) {
-    console.log(req.params.id)
     return res.send("You must be logged in to delete this URL");
   }
+  // If the urlDatabase key and the urlDatabase key's userID are not equal to the cookie.
   if (urlDatabase[req.params.id] && urlDatabase[req.params.id].userID !== req.session.user_id) {
     return res.send("You cannot delete this link without being the owner");
   }
@@ -162,12 +163,13 @@ app.post("/urls/:id", (req, res) => {
     return res.send("This URL link does not exist!")
   }
   if (!req.session.user_id) {
-    console.log(req.params.id)
     return res.send("You must be logged in to edit this URL");
   }
+  // If the urlDatabase key and the urlDatabase key's userID are not equal to the cookie.
   if (urlDatabase[req.params.id] && urlDatabase[req.params.id].userID !== req.session.user_id) {
     return res.send("You cannot edit this link without being the owner");
   }
+  // Sets the key in the urlDatabase as the params id in the search bar and the value as the longURL as the url received from the form and the userID as the cookie.
   urlDatabase[req.params.id] = {longURL: req.body.longURL, userID: req.session.user_id};
   return res.redirect("/urls");
 })
@@ -180,7 +182,7 @@ app.get("/urls/:id", (req, res) => {
     const templateVars = {id: req.params.id, urls: urlDatabase[req.params.id], users, cookie: req.session.user_id};
         return res.render("urls_show", templateVars);
   }
-  return res.send("You do not have permission to access this URL");
+  return res.send("You do not have permission to edit this URL");
 })
 
 app.get("/u/:id", (req, res) => {
@@ -191,14 +193,6 @@ app.get("/u/:id", (req, res) => {
     }
   }
   res.send("This short link does not exist");
-})
-
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-})
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello<b>World</b></body></html>\n");
 })
 
 // ========================== Listener ==========================
