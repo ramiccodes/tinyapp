@@ -30,7 +30,7 @@
           <form method="POST" action="/urls/<%= id %>/delete">
             <tr>
               <td><%= id %></td>
-              <td><%= urls[id] %></td>
+              <td><%= urls[id].longURL %></td>
               <td><a class="btn btn-outline-primary" href="/urls/<%= id %>">Edit</a></td>
               <td><button type="submit" class="btn btn-outline-danger">Delete</button></td>
             </tr>
