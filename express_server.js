@@ -2,51 +2,10 @@
 const express = require('express');
 const bcryptjs = require('bcryptjs');
 let cookieSession = require('cookie-session');
-const { getUserByEmail } = require('./helpers');
+const { getUserByEmail, generateRandomString, urlsForUser } = require('./helpers');
+const { urlDatabase, users } = require('./database');
 const app = express();
 const PORT = 8080;
-
-// ========================== "Databases" ==========================
-const urlDatabase = {
-  "b2xVn2": {longURL : "http://www.lighthouselabs.ca", userID: "aJ48lW"},
-  "9sm5xK": {longURL : "http://www.google.com", userID: "aJ48lW"},
-  "0sm5xK": {longURL : "http://www.hello.com", userID: "aa48lW"}
-};
-
-const users = {
-  aJ48lW: {
-    id: "aJ48lW",
-    email: "a@a.com",
-    password: "a",
-  },
-  aa48lW: {
-    id: "aa48lW",
-    email: "b@b.com",
-    password: "b",
-  },
-}
-
-// ========================== Functions =========================
-const generateRandomString = () => {
-  let urlId = "";
-  const alphanumeric = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z","A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", 1, 2, 3, 4, 5, 6, 7, 8, 9];
-  for (let i = urlId.length; i < 6; i++) {
-    let randomIndex = Math.floor(Math.random() * alphanumeric.length);
-    let item = alphanumeric[randomIndex];
-    urlId += item;
-  }
-  return urlId;
-}
-
-const urlsForUser = (id) => {
-  let urls = {}
-  for (const url in urlDatabase) {
-    if (urlDatabase[url].userID === id) {
-      urls[url] = urlDatabase[url];
-    }
-  }
-  return urls;
-}
 
 // ========================== Middleware ==========================
 app.set("view engine", "ejs");
@@ -57,96 +16,132 @@ app.use(cookieSession({
 }));
 
 // ========================== Endpoints ==========================
+//DONE
 app.get("/", (req, res) => {
-  res.send("Please go to the endpoint /login!");
-});
-
-app.get("/login", (req, res) => {
-  const templateVars = {users, cookie: req.session.user_id};
-  if (req.session.user_id) {
-    return res.redirect("/urls");
-  }
-  res.render("urls_login", templateVars)
-})
-
-app.post("/login", (req, res) => {
-  const hashedPassword = bcryptjs.hashSync(req.body.password, 10);
-  if (req.body.email === '' || req.body.password === '') {
-    return res.status(400).send("Email or Password not available");
-  }
-  for (const userId in users) {
-    let user = users[userId];
-    if (user.email === req.body.email) {
-      if (bcryptjs.compareSync(req.body.password, hashedPassword)) {
-        req.session.user_id = user.id
-        return res.redirect("/urls");
-      }
-    }
-  }
-  return res.status(403).send("Incorrect email or password");
-})
-
-app.post("/logout", (req, res) => {
-  res.clearCookie('userID');
-  res.clearCookie('userID.sig');
-  res.redirect("/login");
-})
-
-app.post("/register", (req, res) => {
-  let id = generateRandomString();
-  if (req.body.email === '' || req.body.password === '') {
-    return res.status(400).send("Email or Password not available");
-  }
-  for (const userId in users) {
-    let user = users[userId];
-    if (user.email === req.body.email) {
-      return res.status(400).send("Email already registered");
-    }
-  }
-  // Sets the key and the id as the return value of the generateRandomString function, email as the value from the form and the password but it is hashed.
-  users[id] = {id: id, email: req.body.email, password: bcryptjs.hashSync(req.body.password, 10)};
-  req.session.user_id = users[id].id;
-  return res.redirect("/urls");
-});
-
-app.get("/register", (req, res) => {
-  if (req.session.user_id) {
-    return res.redirect("/urls");
-  }
-  const templateVars = {users, cookie: req.session.user_id};
-  res.render("urls_register", templateVars);
-})
-
-app.get("/urls", (req, res) => {
-  if (!req.session.user_id) {
-    res.send("You must be logged in to see and create shortened URLs.");
-  }
-  const templateVars = {urls: urlDatabase, users, cookie: req.session.user_id};
-  res.render("urls_index", templateVars);
-})
-
-app.get("/urls/new", (req, res) => {
+  // If the user is NOT logged in, redirect to /login
   if (!req.session.user_id) {
     return res.redirect("/login");
   }
+  // If the user is logged in, redirect to /urls
+  return res.redirect("/urls");
+});
+
+//DONE
+app.get("/login", (req, res) => {
   const templateVars = {users, cookie: req.session.user_id};
-  res.render("urls_new", templateVars);
+  // If the user is logged in, redirect to /urls
+  if (req.session.user_id) {
+    return res.redirect("/urls");
+  }
+  // If the user is NOT logged in, render the urls_login view template
+  return res.render("urls_login", templateVars)
 })
 
+//DONE
+app.post("/login", (req, res) => {
+  let user = getUserByEmail(req.body.email, users);
+  
+  // If the email or password from the form has no value, send a status 400 with a message
+  if (req.body.email === '' || req.body.password === '') {
+    return res.status(400).send("Email or Password not available");
+  }
+  
+  // If plaintext password is equals to hashed password, set id key of user as cookie
+  if (bcryptjs.compareSync(req.body.password, user.password)) {
+    req.session.user_id = user.id
+    return res.redirect("/urls");
+  }
+  
+  // If user entered an email that isn't registered or an existing email account but wrong password, send a status code 403 with a message
+  return res.status(403).send("Incorrect email or password");
+})
+
+//DONE
+app.post("/logout", (req, res) => {
+  // Clears the userID cookies and redirects to /login
+  res.clearCookie('userID');
+  res.clearCookie('userID.sig');
+  return res.redirect("/login");
+})
+
+//DONE
+app.post("/register", (req, res) => {
+  let id = generateRandomString();
+  let user = getUserByEmail(req.body.email, users);
+
+  // If the email or password from the form has no value, send a status 400 with a message
+  if (req.body.email === '' || req.body.password === '') {
+    return res.status(400).send("Email or Password not available");
+  }
+  
+  // If the user entered an email that isn't registered on the database, create a new key value pair with details for a new user account
+  if (user === undefined) {
+    // Sets the key and the id as the return value of the generateRandomString function, email as the value from the form and the password but it is hashed.
+    users[id] = {id: id, email: req.body.email, password: bcryptjs.hashSync(req.body.password, 10)};
+    req.session.user_id = users[id].id;
+    console.log(users);
+    return res.redirect("/urls");
+  }
+
+  // If the email the user entered was already registered on the database, send a status code 400 with a message
+  if (user.email === req.body.email) {
+    return res.status(400).send("Email already registered");
+  }
+
+});
+
+//DONE
+app.get("/register", (req, res) => {
+  // If the user is logged in, redirect to /urls
+  if (req.session.user_id) {
+    return res.redirect("/urls");
+  }
+  // If the user is NOT logged in, render the urls_register view template
+  const templateVars = {users, cookie: req.session.user_id};
+  return res.render("urls_register", templateVars);
+})
+
+//DONE
+app.get("/urls", (req, res) => {
+  const templateVars = {urls: urlsForUser(req.session.user_id, urlDatabase), users, cookie: req.session.user_id};
+  // If the user is NOT logged in, send a message as a response
+  if (!req.session.user_id) {
+    return res.send("You must be logged in to see and create shortened URLs.");
+  }
+  // If the user is logged in, render the urls_index view template
+  return res.render("urls_index", templateVars);
+})
+
+//DONE
+app.get("/urls/new", (req, res) => {
+  const templateVars = {users, cookie: req.session.user_id};
+  // If the user is NOT logged in, redirect to /login
+  if (!req.session.user_id) {
+    return res.redirect("/login");
+  }
+  // If the user is logged in, render the urls_new view template
+  return res.render("urls_new", templateVars);
+})
+
+//DONE
 app.post("/urls", (req, res) => {
   let id = generateRandomString();
+  // If the user is NOT logged in, send a message as a response
   if (!req.session.user_id) {
     return res.send("You cannot shorten links without creating an account");
   }
   // Sets the key in the urlDatabase as the return value of the generateRandomString function and the value as the longURL as the url received from the form and the userID as the cookie.
   urlDatabase[id] = {longURL: req.body.longURL, userID: req.session.user_id};
-  res.redirect(`/urls/${id}`);
+  return res.redirect(`/urls/${id}`);
 })
 
+//DONE
 app.post("/urls/:id/delete", (req, res) => {
+  // If the url does not exist in the Database
   if (!urlDatabase[req.params.id]) {
     return res.send("This URL link does not exist!")
   }
+  // If the user is not logged in, send a message
   if (!req.session.user_id) {
     return res.send("You must be logged in to delete this URL");
   }
@@ -154,45 +149,56 @@ app.post("/urls/:id/delete", (req, res) => {
   if (urlDatabase[req.params.id] && urlDatabase[req.params.id].userID !== req.session.user_id) {
     return res.send("You cannot delete this link without being the owner");
   }
+  // If the user is logged in and owns the URL, deletes this url object from the database and redirect to /urls
   delete urlDatabase[req.params.id];
-  res.redirect("/urls");
+  return res.redirect("/urls");
 })
 
+//DONE
 app.post("/urls/:id", (req, res) => {
+  // If the urlDatabase key value pair does not exist, send a message
   if (!urlDatabase[req.params.id]) {
     return res.send("This URL link does not exist!")
   }
+  // If the user is not logged in, send a message
   if (!req.session.user_id) {
     return res.send("You must be logged in to edit this URL");
   }
-  // If the urlDatabase key and the urlDatabase key's userID are not equal to the cookie.
+  // If the urlDatabase key and the urlDatabase key's userID are not equal to the cookie, send a message
   if (urlDatabase[req.params.id] && urlDatabase[req.params.id].userID !== req.session.user_id) {
     return res.send("You cannot edit this link without being the owner");
   }
-  // Sets the key in the urlDatabase as the params id in the search bar and the value as the longURL as the url received from the form and the userID as the cookie.
+  // Sets the key in the urlDatabase as the params id in the search bar and the value as the longURL as the url received from the form and the userID as the cookie and redirect to /urls
   urlDatabase[req.params.id] = {longURL: req.body.longURL, userID: req.session.user_id};
   return res.redirect("/urls");
 })
 
+//DONE
 app.get("/urls/:id", (req, res) => {
+  // If the user is not logged in, send a message
   if (!req.session.user_id) {
-    res.send("You must log in first before you can access this URL page")
+    return res.send("You must log in first before you can access this URL page")
   }
+  // If the URL exists in the urlDatabase AND it is equals to the user_id cookie, render the urls_show view template
   if (urlDatabase[req.params.id] && urlDatabase[req.params.id].userID === req.session.user_id) {
     const templateVars = {id: req.params.id, urls: urlDatabase[req.params.id], users, cookie: req.session.user_id};
-        return res.render("urls_show", templateVars);
+    return res.render("urls_show", templateVars);
   }
+  // If the URL cookie does not match the userID, send a message
   return res.send("You do not have permission to edit this URL");
 })
 
+//DONE
 app.get("/u/:id", (req, res) => {
+  // For every URL in urlDatabase object, if the URL matches the dynamic id in the browser URL, redirect to the longURL value of that URL object
   for (let url in urlDatabase) {
     if (url === req.params.id) {
       const longURL = urlDatabase[url].longURL;
-      res.redirect(longURL);
+      return res.redirect(longURL);
     }
   }
-  res.send("This short link does not exist");
+  // If the URL does not match, send a message
+  return res.send("This short link does not exist");
 })
 
 // ========================== Listener ==========================
