@@ -16,7 +16,6 @@ app.use(cookieSession({
 }));
 
 // ========================== Endpoints ==========================
-//DONE
 app.get("/", (req, res) => {
   // If the user is NOT logged in, redirect to /login
   if (!req.session.user_id) {
@@ -26,7 +25,6 @@ app.get("/", (req, res) => {
   return res.redirect("/urls");
 });
 
-//DONE
 app.get("/login", (req, res) => {
   const templateVars = {users, cookie: req.session.user_id};
   // If the user is logged in, redirect to /urls
@@ -37,7 +35,6 @@ app.get("/login", (req, res) => {
   return res.render("urls_login", templateVars)
 })
 
-//DONE
 app.post("/login", (req, res) => {
   let user = getUserByEmail(req.body.email, users);
   
@@ -56,7 +53,6 @@ app.post("/login", (req, res) => {
   return res.status(403).send("Incorrect email or password");
 })
 
-//DONE
 app.post("/logout", (req, res) => {
   // Clears the userID cookies and redirects to /login
   res.clearCookie('userID');
@@ -64,7 +60,6 @@ app.post("/logout", (req, res) => {
   return res.redirect("/login");
 })
 
-//DONE
 app.post("/register", (req, res) => {
   let id = generateRandomString();
   let user = getUserByEmail(req.body.email, users);
@@ -79,7 +74,6 @@ app.post("/register", (req, res) => {
     // Sets the key and the id as the return value of the generateRandomString function, email as the value from the form and the password but it is hashed.
     users[id] = {id: id, email: req.body.email, password: bcryptjs.hashSync(req.body.password, 10)};
     req.session.user_id = users[id].id;
-    console.log(users);
     return res.redirect("/urls");
   }
 
@@ -90,7 +84,6 @@ app.post("/register", (req, res) => {
 
 });
 
-//DONE
 app.get("/register", (req, res) => {
   // If the user is logged in, redirect to /urls
   if (req.session.user_id) {
@@ -101,7 +94,6 @@ app.get("/register", (req, res) => {
   return res.render("urls_register", templateVars);
 })
 
-//DONE
 app.get("/urls", (req, res) => {
   const templateVars = {urls: urlsForUser(req.session.user_id, urlDatabase), users, cookie: req.session.user_id};
   // If the user is NOT logged in, send a message as a response
@@ -112,7 +104,6 @@ app.get("/urls", (req, res) => {
   return res.render("urls_index", templateVars);
 })
 
-//DONE
 app.get("/urls/new", (req, res) => {
   const templateVars = {users, cookie: req.session.user_id};
   // If the user is NOT logged in, redirect to /login
@@ -123,7 +114,6 @@ app.get("/urls/new", (req, res) => {
   return res.render("urls_new", templateVars);
 })
 
-//DONE
 app.post("/urls", (req, res) => {
   let id = generateRandomString();
   // If the user is NOT logged in, send a message as a response
@@ -135,7 +125,6 @@ app.post("/urls", (req, res) => {
   return res.redirect(`/urls/${id}`);
 })
 
-//DONE
 app.post("/urls/:id/delete", (req, res) => {
   // If the url does not exist in the Database
   if (!urlDatabase[req.params.id]) {
@@ -154,7 +143,6 @@ app.post("/urls/:id/delete", (req, res) => {
   return res.redirect("/urls");
 })
 
-//DONE
 app.post("/urls/:id", (req, res) => {
   // If the urlDatabase key value pair does not exist, send a message
   if (!urlDatabase[req.params.id]) {
@@ -173,7 +161,6 @@ app.post("/urls/:id", (req, res) => {
   return res.redirect("/urls");
 })
 
-//DONE
 app.get("/urls/:id", (req, res) => {
   // If the user is not logged in, send a message
   if (!req.session.user_id) {
@@ -188,7 +175,6 @@ app.get("/urls/:id", (req, res) => {
   return res.send("You do not have permission to edit this URL");
 })
 
-//DONE
 app.get("/u/:id", (req, res) => {
   // For every URL in urlDatabase object, if the URL matches the dynamic id in the browser URL, redirect to the longURL value of that URL object
   for (let url in urlDatabase) {
